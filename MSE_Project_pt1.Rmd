@@ -1,0 +1,186 @@
+---
+title: "MSE226_Project_Part_1_Ravi_Srinivas"
+output: html_document
+---
+
+LINK: https://docs.google.com/document/d/17WIhqy49XbY54nyXm6Y8L6U7T_QhUsjsmRAy0I2lWF8/edit
+
+DATA SET: https://oehha.ca.gov/calenviroscreen/maps-data
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+library(tidyverse)
+library(dplyr)
+library(leaflet)
+library(ggplot2)
+
+```
+
+We first load in the dataset. 
+```{r data}
+air_dataset_meta <- read.csv("ces3results_perc.csv") #removed percentile columns before uploading
+
+air_dataset <- air_dataset_meta %>% #remove metadata indicators
+  select(
+    -c(
+      "Census.Tract",
+      "Total.Population",
+      "California.County",
+      "ZIP",
+      "Nearby.City...to.help.approximate.location.only.",
+      "Longitude", 
+      "Latitude", 
+      "SB.535.Disadvantaged.Community"
+    )
+  )
+
+air_data_obs <- air_dataset %>% 
+  select(
+    -c(
+      "CES.3.0.Score", 
+      "Pollution.Burden",
+      "Pollution.Burden.Score",
+      "Pop..Char.", 
+      "Pop..Char..Score"
+    )
+  )
+
+#FINAL DATA SET OF COVARIATES
+head(air_data_obs)
+
+```
+
+```{r}
+#NA's per column 
+sum(is.na(air_data_obs))
+colSums(is.na(air_data_obs))
+```
+```{r}
+#COMPLETE ROWS
+air_data_comp <- air_data_obs[complete.cases(air_data_obs),]
+air_data_comp
+
+#INCOMPLETE ROWS
+air_miss <- air_data_obs[!complete.cases(air_data_obs),]
+air_miss
+
+#FINAL DATA SET OF OBSERVATIONS
+air_data_obs <- air_data_comp
+```
+```{r}
+# PULL OUT TEST DATA
+set.seed(1)
+count_train <- nrow(air_data_obs) * 0.8
+
+in.train = sample(nrow(air_data_obs), size = count_train)
+
+air_train = air_data_obs[in.train, ]
+air_test = air_data_obs[-in.train, ]
+
+```
+
+
+```{r}
+#EXPLORE TRAINING DATA
+library(GGally)
+ggcorr(air_train, label = TRUE, label_size = 1.5, geom = "tile",  max_size = 6, hjust = 0.8, size = 2) 
+
+```
+
+```{r}
+count_graph <- 50
+in.graph = sample(nrow(air_train), size = count_graph)
+air_graph= air_data_obs[in.graph, ]
+
+#Environmental indictors 
+ggpairs(air_graph, columns = c(1:10)) + theme_gray(base_size = 6)
+
+#Social indicators
+ggpairs(air_graph, columns = c(11:20)) + theme_gray(base_size = 6)
+
+```
+
+```{r}
+library(reshape)
+library(reshape2)
+library(corrplot)
+
+corr_simple <- function(data=air_train, sig = 0.3){
+  #convert data to numeric in order to run correlations
+  #convert to factor first to keep the integrity of the data - each value will become a number rather than turn into NA
+  df_cor <- data %>% mutate_if(is.character, as.factor)
+  df_cor <- df_cor %>% mutate_if(is.factor, as.numeric)
+  #run a correlation and drop the insignificant ones
+  corr <- cor(df_cor)
+  #prepare to drop duplicates and correlations of 1     
+  corr[lower.tri(corr,diag=TRUE)] <- NA 
+  #drop perfect correlations
+  corr[corr == 1] <- NA 
+  #turn into a 3-column table
+  corr <- as.data.frame(as.table(corr))
+  #remove the NA values from above 
+  corr <- na.omit(corr) 
+  #select significant values  
+  corr <- subset(corr, abs(Freq) > sig) 
+  #sort by highest correlation
+  corr <- corr[order(-abs(corr$Freq)),] 
+  #print table
+  print(corr)
+  #turn corr back into matrix in order to plot with corrplot
+  mtx_corr <- reshape2::acast(corr, Var1~Var2, value.var="Freq")
+  
+  #plot correlations visually
+  corrplot(mtx_corr, is.corr=FALSE, tl.col="black", na.label=" ")
+}
+corr_simple()
+
+
+#High Potential 
+ggpairs(air_graph, columns = c(1, 2, 4, 8, 9, 10, 14, 15, 16, 17, 18, 19, 20)) + theme_gray(base_size = 6)
+```
+
+```{r - regular linear regression}
+library(cvTools)
+library(lattice)
+library(robustbase)
+
+linreg_all = lm(Cardiovascular.Disease ~ ., data = air_train)
+summary(linreg_all)
+quality.cv = cvFit(linreg_all, data = air_train, y=air_train$Cardiovascular.Disease, K = 10, seed=1)
+print(quality.cv)
+```
+
+
+https://drsimonj.svbtle.com/ridge-regression-with-glmnet
+```{r - ridge}
+library(tidyverse)
+library(broom)
+library(glmnet)
+
+y <- air_train$Cardiovascular.Disease
+x <- air_train %>% select(-c(Cardiovascular.Disease)) %>% data.matrix()
+
+lambdas <- 10^seq(3, -2, by = -.1)
+
+fit <- glmnet(x, y, alpha = 0, lambda = lambdas, standardize = TRUE)
+summary(fit)
+
+cv_fit <- cv.glmnet(x, y, alpha = 0, lambda = lambdas)
+plot(cv_fit)
+
+opt_lambda <- cv_fit$lambda.min
+opt_lambda
+```
+
+```
+
+
+```{r}
+#all covariates (reg, ridge, lasso)
+#corr 3 (reg, ridge, lasso)
+#transformed & corr 3 (reg, ridge, lasso) (transforming = log data or other methods)
+#transformed (reg, ridge, lasso)
+#transformed & corr 5 (reg, ridge, lasso)
+```
+
