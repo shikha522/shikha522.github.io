@@ -1701,7 +1701,7 @@ bay_pumas &lt;-
   st_centroid() %&gt;% 
   .[bay_counties, ] %&gt;% 
   st_set_geometry(NULL) %&gt;% 
-  left_join(ca_pumas %&gt;% select(GEOID10)) %&gt;% 
+  left_join(ca_pumas %&gt;% dplyr::select(GEOID10)) %&gt;% 
   st_as_sf()
 
 bay_pums &lt;-
@@ -1746,6 +1746,8 @@ summary(model_pums)</code></pre>
 ## Multiple R-squared:  3.168e-05,  Adjusted R-squared:  2.636e-05 
 ## F-statistic: 5.957 on 2 and 376054 DF,  p-value: 0.002589</code></pre>
 <p>The R^2 value is 0.23, which is a very weak correlation at best. This result is probably due to the variety of suburban-urban neighborhoods in the Bay Area, which are all being aggregated together in this example. It may also be due to the variation between income brackets under 75K yearly income, though under 75K can be considered below the poverty line in parts of the Bay. Even if public transit feels unsafe for women, it may not be a complete deterrant and may be the only option for female commuters. There are stronger localized relationships between income, choice of transit, and gender, and zooming in on particular brackets and particular types of transit could yield stronger relationships. Industry and age could also play a role.</p>
+<p>Both coefficients were negative, implying that low income and presenting as female were negatively associated with transit choice. This finding is in line with other studies on gender but contrasts the assumption about poverty causing use of public transit.</p>
+<p>In this case, gender was not a significant covariate, but % under poverty was almost always significant. This means that the coefficient value would appear in nearly every sample. Therefore, at an individual level, poverty is will almost always cause a decrease for every regression point. Hwoever, this regression analysis should an incredibly small decrease at the individual level for either of these two factors.</p>
 </div>
 <div id="tract-analysis" class="section level2">
 <h2>Tract Analysis</h2>
@@ -1846,6 +1848,7 @@ summary(model_total)</code></pre>
 ## Multiple R-squared:  0.01018,    Adjusted R-squared:  0.00892 
 ## F-statistic: 8.092 on 2 and 1574 DF,  p-value: 0.0003189</code></pre>
 <p>Once again, we see an even smaller R^2 value (0.1578) for the relationship between transit, income, and gender. Since our buckets for income are more general in this example as compared to PUMS data, this may disrupt trends we see based on specific income brackets and have lowered the correlation. In some parts of the Bay, 75K is a smaller threshold for poverty as well, so larger income brackets may bring a larger correlation.</p>
+<p>We also see that that both values were statistically significant, with % under 75K being significant at the 95% level. However, in this analysis, gender was extremely significant. The positive coefficient suggests that for nearly any sample, gender had a positive correlation with the tract, while income under 75K had a negative correlation. Both findings are contrary to much of the evidence presented that gender can deter use of transit while being under an income threshold may increase utilization; the point on gender differs as well from the individual analysis. However, both coefficients are &lt; 1, implying that neither has a particularly strong effect on choice of public transit.</p>
 <p>Overall, this particular analysis does not yield a causal relationship, and COVID-19 may further disrupt transportation choices that this data does not capture. The scale of this analysis was also very large, given the attempt to subject the entire Bay Area to analysis, even if transportation systems are only strong in some of the counties. However, understanding barriers to a safe, comfortable public transit experience across demographic is key to designing more equitable systems and will require more qualitative research on local systems.</p>
 </div>
 
